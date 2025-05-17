@@ -1,0 +1,7 @@
+# Формат: ASN # Комментарий
+# Примеры:
+15169 # Google
+32934 # Facebook
+13335 # Cloudflare
+14618 # Amazon
+8075 # Microsoft 
