@@ -11,7 +11,11 @@ def read_networks(filename: str) -> List[ipaddress.IPv4Network]:
         for line in f:
             line = line.strip()
             if line:
-                networks.append(ipaddress.IPv4Network(line))
+                # Если есть комментарий, берём только часть до #
+                if '#' in line:
+                    line = line.split('#')[0].strip()
+                if line:
+                    networks.append(ipaddress.IPv4Network(line))
     return networks
 
 
