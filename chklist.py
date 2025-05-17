@@ -292,11 +292,51 @@ def get_exclude_list(exclude_file: str = None) -> List[str]:
         return []
 
 
+def get_as_list(as_list_file: str = None) -> Dict[int, str]:
+    """Получает список AS из файла или GitHub, кэширует и использует кэш при ошибке."""
+    ensure_cache_dir()
+    if as_list_file and as_list_file.strip():
+        print(f"Reading AS list from {as_list_file}...")
+        with open(as_list_file, "r", encoding="utf-8") as f:
+            as_list = {}
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#"):
+                    parts = line.split("#", 1)
+                    asn = int(parts[0].strip())
+                    comment = parts[1].strip() if len(parts) > 1 else ""
+                    as_list[asn] = comment
+        print(f"Successfully read {len(as_list)} AS entries.")
+        return as_list
+
+    url = "https://raw.githubusercontent.com/salsaly4/netfilter/refs/heads/master/aslist.txt"
+    try:
+        print(f"Downloading AS list from {url}...")
+        response = requests.get(url, timeout=30)
+        response.raise_for_status()
+        as_list = {}
+        for line in response.text.splitlines():
+            line = line.strip()
+            if line and not line.startswith("#"):
+                parts = line.split("#", 1)
+                asn = int(parts[0].strip())
+                comment = parts[1].strip() if len(parts) > 1 else ""
+                as_list[asn] = comment
+        print(f"Successfully downloaded {len(as_list)} AS entries.")
+        save_to_cache("aslist", list(as_list.keys()))
+        return as_list
+    except requests.RequestException as e:
+        print(f"Failed to download AS list: {e}")
+        cached_as_list = get_cached_data("aslist")
+        if cached_as_list:
+            print(f"Using cached AS list: {len(cached_as_list)} entries.")
+            return {int(asn): "" for asn in cached_as_list}
+        return {}
+
+
 def collect_routes(as_list_file: str, output_file: str, exclude_file: str = None):
     """Собирает маршруты из разных источников и применяет фильтрацию."""
-    print(f"Reading AS list from {as_list_file}...")
-    as_list = read_as_list(as_list_file)
-    print(f"Successfully read {len(as_list)} AS entries.")
+    as_list = get_as_list(as_list_file)
 
     all_routes = set()
 
@@ -347,8 +387,8 @@ def main():
     parser.add_argument(
         "-a",
         "--as-list",
-        default="aslist.txt",
-        help="Файл со списком AS (по умолчанию: aslist.txt)",
+        default="",
+        help="Файл со списком AS (по умолчанию: скачивается из GitHub)",
     )
     parser.add_argument(
         "-o",
@@ -359,8 +399,8 @@ def main():
     parser.add_argument(
         "-x",
         "--exclude",
-        default="exclude.lst",
-        help="Файл исключений (по умолчанию: exclude.lst)",
+        default="",
+        help="Файл исключений (по умолчанию: скачивается из GitHub)",
     )
     parser.add_argument(
         "--apply",
@@ -372,7 +412,11 @@ def main():
     print(f"Checking for changes in {args.output}...")
     old_hash = get_file_hash(args.output)
 
-    collect_routes(args.as_list, args.output, args.exclude)
+    collect_routes(
+        args.as_list if args.as_list.strip() else None,
+        args.output,
+        args.exclude if args.exclude.strip() else None,
+    )
 
     new_hash = get_file_hash(args.output)
     if old_hash != new_hash:
