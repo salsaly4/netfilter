@@ -35,9 +35,9 @@ def process_networks(netlist_file: str, exclude_file: str, output_file: str):
     """Обрабатывает списки сетей и создает результирующий файл."""
     networks = read_networks(netlist_file)
     exclude_networks = read_networks(exclude_file)
-    
+
     result_networks = set()
-    
+
     for net in networks:
         # Находим все исключения, которые попадают в эту сеть
         relevant_excludes = [
@@ -45,13 +45,13 @@ def process_networks(netlist_file: str, exclude_file: str, output_file: str):
             if ex.subnet_of(net)
         ]
         result_networks.update(exclude_subnets(net, relevant_excludes))
-    
+
     # Сортируем сети по возрастанию
     sorted_networks = sorted(
         result_networks,
         key=lambda x: (x.network_address, x.prefixlen)
     )
-    
+
     # Записываем результат, обеспечивая уникальность строк
     seen_networks = set()
     with open(output_file, 'w') as f:
@@ -79,5 +79,5 @@ if __name__ == "__main__":
         help='Выходной файл (по умолчанию: result.txt)'
     )
     args = parser.parse_args()
-    
+
     process_networks(args.input, args.exclude, args.output)
