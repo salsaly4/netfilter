@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import ipaddress
 from typing import List
+import argparse
 
 
 def read_networks(filename: str) -> List[ipaddress.IPv4Network]:
@@ -62,4 +63,21 @@ def process_networks(netlist_file: str, exclude_file: str, output_file: str):
 
 
 if __name__ == "__main__":
-    process_networks("netlist.txt", "exclude.txt", "result.txt")
+    parser = argparse.ArgumentParser(
+        description='Обработка сетей с исключениями.'
+    )
+    parser.add_argument(
+        '-i', '--input', default='networks.txt',
+        help='Входной файл со списком сетей (по умолчанию: networks.txt)'
+    )
+    parser.add_argument(
+        '-x', '--exclude', default='exclude.txt',
+        help='Файл исключений (по умолчанию: exclude.txt)'
+    )
+    parser.add_argument(
+        '-o', '--output', default='result.txt',
+        help='Выходной файл (по умолчанию: result.txt)'
+    )
+    args = parser.parse_args()
+    
+    process_networks(args.input, args.exclude, args.output)
