@@ -130,11 +130,20 @@ def process_networks_in_memory(
     seen_networks = set()
     try:
         with open(output_file, "w", encoding="utf-8") as f:
+            unique_networks = []
             for net in sorted_networks:
                 net_str = str(net)
                 if net_str not in seen_networks:
-                    f.write(f"{net_str}\n")
+                    unique_networks.append(net_str)
                     seen_networks.add(net_str)
+
+            # Записываем все строки, кроме последней, с переносом строки
+            for net_str in unique_networks[:-1]:
+                f.write(f"{net_str}\n")
+
+            # Записываем последнюю строку без переноса строки
+            if unique_networks:
+                f.write(unique_networks[-1])
     except (IOError, OSError) as e:
         print(f"Error writing output file {output_file}: {e}", file=sys.stderr)
         raise
