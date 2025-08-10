@@ -27,13 +27,13 @@ fi
 source venv/bin/activate
 
 # Check that Python is available
-if ! command -v python &> /dev/null; then
+if ! command -v python3 &> /dev/null; then
     echo "Error: Python not found in virtual environment" >&2
     exit 1
 fi
 
 # Check Python version
-PYTHON_VERSION=$(python --version 2>&1)
+PYTHON_VERSION=$(python3 --version 2>&1)
 echo "Using: $PYTHON_VERSION"
 
 # Запускаем antibl с параметрами
@@ -41,7 +41,7 @@ echo "Starting antibl at $(date)"
 echo "Directory: $SCRIPT_DIR"
 
 # Запускаем с параметром --summarize для автоматического обновления
-python main.py --summarize --output routes.txt
+python3 main.py --output /etc/bird/routes.txt --apply
 
 # Проверяем результат выполнения
 if [[ $? -eq 0 ]]; then
