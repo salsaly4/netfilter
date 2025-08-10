@@ -68,10 +68,14 @@ def main():
 
     try:
         print(f"Collecting routes and writing to {args.output}...")
+        # Подготавливаем аргументы для collect_routes
+        as_list_arg = args.as_list if args.as_list and args.as_list.strip() else None
+        exclude_arg = args.exclude if args.exclude and args.exclude.strip() else None
+
         collect_routes(
-            args.as_list if args.as_list and args.as_list.strip() else None,
+            as_list_arg,
             args.output,
-            args.exclude if args.exclude and args.exclude.strip() else None,
+            exclude_arg,
             args.summarize,
         )
         print("Routes collection completed successfully.")

@@ -122,12 +122,12 @@ def get_as_list(as_list_file: str = None) -> Dict[int, str]:
                         file=sys.stderr,
                     )
         print(f"Successfully downloaded {len(as_list)} AS entries.")
-        save_to_cache("aslist", list(as_list.keys()))
+        save_to_cache("aslist", [str(asn) for asn in as_list.keys()])
         return as_list
     except requests.RequestException as e:
         print(f"Failed to download AS list: {e}")
         cached_as_list = get_cached_data("aslist")
         if cached_as_list:
             print(f"Using cached AS list: {len(cached_as_list)} entries.")
-            return {int(asn): "" for asn in cached_as_list}
+            return {int(asn): "" for asn in cached_as_list if str(asn).isdigit()}
         return {}
