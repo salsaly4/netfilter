@@ -38,6 +38,11 @@ def exclude_subnets(network: ipaddress.IPv4Network, excludes: list) -> list:
             print(f"Warning: Invalid exclude type: {type(ex)}", file=sys.stderr)
             continue
 
+        # Если исключение полностью совпадает с сетью, исключаем её полностью
+        if ex == network:
+            return []
+
+        # Если исключение является подсетью сети
         if ex.subnet_of(network):
             result = []
             try:
@@ -54,6 +59,52 @@ def exclude_subnets(network: ipaddress.IPv4Network, excludes: list) -> list:
                     f"Warning: Error processing subnet {network}: {e}", file=sys.stderr
                 )
                 return [network]
+
+        # Если исключение перекрывается с сетью, но не является подсетью
+        elif ex.overlaps(network):
+            # Исключаем перекрывающуюся часть
+            try:
+                # Создаем сеть, исключая перекрывающуюся часть
+                if ex.network_address > network.network_address:
+                    # Исключение начинается после начала сети
+                    if ex.broadcast_address < network.broadcast_address:
+                        # Исключение заканчивается до конца сети
+                        # Разбиваем на две части: до и после исключения
+                        before_ex = ipaddress.IPv4Network(
+                            (network.network_address, ex.network_address - 1),
+                            strict=False,
+                        )
+                        after_ex = ipaddress.IPv4Network(
+                            (ex.broadcast_address + 1, network.broadcast_address),
+                            strict=False,
+                        )
+                        return [before_ex, after_ex]
+                    else:
+                        # Исключение заканчивается после конца сети
+                        before_ex = ipaddress.IPv4Network(
+                            (network.network_address, ex.network_address - 1),
+                            strict=False,
+                        )
+                        return [before_ex]
+                else:
+                    # Исключение начинается до начала сети
+                    if ex.broadcast_address < network.broadcast_address:
+                        # Исключение заканчивается до конца сети
+                        after_ex = ipaddress.IPv4Network(
+                            (ex.broadcast_address + 1, network.broadcast_address),
+                            strict=False,
+                        )
+                        return [after_ex]
+                    else:
+                        # Исключение полностью покрывает сеть
+                        return []
+            except ValueError as e:
+                print(
+                    f"Warning: Error processing overlap for {network} with {ex}: {e}",
+                    file=sys.stderr,
+                )
+                return [network]
+
     return [network]
 
 
@@ -103,8 +154,8 @@ def process_networks_in_memory(
     result_networks = set()
 
     for net in networks_list:
-        # Находим все исключения, которые попадают в эту сеть
-        relevant_excludes = [ex for ex in exclude_networks if ex.subnet_of(net)]
+        # Находим все исключения, которые перекрываются с этой сетью
+        relevant_excludes = [ex for ex in exclude_networks if ex.overlaps(net)]
         result_networks.update(exclude_subnets(net, relevant_excludes))
 
     if not result_networks:
