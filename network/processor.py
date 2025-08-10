@@ -61,69 +61,26 @@ def summarize_networks(
     networks: List[ipaddress.IPv4Network],
 ) -> List[ipaddress.IPv4Network]:
     """
-    Рекурсивно суммаризует список сетей для получения минимального размера.
-    Объединяет соседние подсети в более крупные сети.
+    Упрощенная суммаризация: удаляет сети, которые являются подсетями других сетей.
+    Это быстрее и эффективнее для больших объемов данных.
     """
     if not networks:
         return []
 
-    # Сортируем сети по адресу и префиксу
-    sorted_networks = sorted(networks, key=lambda x: (x.network_address, x.prefixlen))
+    # Сортируем сети по префиксу (от меньшего к большему) и затем по адресу
+    sorted_networks = sorted(networks, key=lambda x: (x.prefixlen, x.network_address))
 
+    # Удаляем сети, которые являются подсетями других сетей
     result = []
-    i = 0
-
-    while i < len(sorted_networks):
-        current = sorted_networks[i]
-
-        # Ищем соседние сети, которые можно объединить
-        j = i + 1
-        candidates = [current]
-
-        while j < len(sorted_networks):
-            next_net = sorted_networks[j]
-
-            # Проверяем, можно ли объединить текущую сеть с следующей
-            if (
-                current.prefixlen == next_net.prefixlen
-                and current.supernet(new_prefix=current.prefixlen - 1).network_address
-                == next_net.supernet(new_prefix=next_net.prefixlen - 1).network_address
-            ):
-
-                # Проверяем, что объединенная сеть не содержит других сетей из списка
-                supernet = current.supernet(new_prefix=current.prefixlen - 1)
-                can_merge = True
-
-                for k in range(len(sorted_networks)):
-                    if k != i and k != j:
-                        other_net = sorted_networks[k]
-                        if supernet.overlaps(other_net) and not other_net.subnet_of(
-                            supernet
-                        ):
-                            can_merge = False
-                            break
-
-                if can_merge:
-                    candidates.append(next_net)
-                    j += 1
-                else:
-                    break
-            else:
+    for i, net in enumerate(sorted_networks):
+        is_subnet = False
+        # Проверяем только сети с меньшим префиксом (более крупные)
+        for j in range(i):
+            if net.subnet_of(sorted_networks[j]):
+                is_subnet = True
                 break
-
-        if len(candidates) > 1:
-            # Объединяем сети
-            merged = candidates[0].supernet(new_prefix=candidates[0].prefixlen - 1)
-            result.append(merged)
-            i = j
-        else:
-            # Не можем объединить, добавляем как есть
-            result.append(current)
-            i += 1
-
-    # Рекурсивно применяем суммаризацию, если что-то изменилось
-    if len(result) < len(networks):
-        return summarize_networks(result)
+        if not is_subnet:
+            result.append(net)
 
     return result
 
